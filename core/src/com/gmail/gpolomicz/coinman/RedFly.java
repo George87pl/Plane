@@ -19,8 +19,12 @@ class RedFly extends Monster {
             new Texture("bird2_1.png"),
             new Texture("bird2_2.png")};
 
-    RedFly(int speed, int animationSpeed, int positionX, int positionY) {
-        super(flyTextures, speed, animationSpeed, positionX, positionY);
+    private static Texture[] deathTexture = new Texture[]{
+            new Texture("bird2death1.png"),
+            new Texture("bird2death2.png")};
+
+    RedFly(int lives, int speed, int animationSpeed, int positionX, int positionY) {
+        super(flyTextures, deathTexture, lives, speed, animationSpeed, positionX, positionY);
         flyY = positionY;
         flyX = positionX;
         this.speed = speed;

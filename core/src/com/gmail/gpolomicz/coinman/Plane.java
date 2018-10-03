@@ -2,9 +2,19 @@ package com.gmail.gpolomicz.coinman;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -12,28 +22,72 @@ import java.util.Random;
 public class Plane extends ApplicationAdapter {
     private static final String TAG = "GPDEB";
 
-    private static final int CLOUDS_NUMBER = 500; //IF LESS THAN MORE CLOUDS
+    private static final int CLOUDS_NUMBER = 300; //IF LESS THAN MORE CLOUDS
     private static final int MONSTERS_NUMBER = 100; //IF LESS THAN MORE MONSTERS
 
     private SpriteBatch batch;
     private Texture background;
+    private Texture logo;
+    private Texture level1;
+    private Texture level2;
+    private Texture boss;
+    private Texture gameOver;
+    private Stage stage;
+
+
     private Player player;
     private Random random;
 
     private ArrayList<Clouds> clouds = new ArrayList<Clouds>();
-    private ArrayList<BrownBird> brownBird = new ArrayList<BrownBird>();
-    private ArrayList<RedFly> redFly = new ArrayList<RedFly>();
+    private ArrayList<Monster> monster = new ArrayList<Monster>();
 
     private int cloudSpawn;
     private int monsterSpawn;
-    private int gameState = 1;
+    private int gameState;
+    private int level;
+    private boolean level2IsOut = false;
+    private double gameTime;
+    private BitmapFont font;
+    private int score;
+
 
     @Override
     public void create() {
         batch = new SpriteBatch();
         background = new Texture("bg.png");
+        logo = new Texture("logo.png");
+        level1 = new Texture("level1.png");
+        level2 = new Texture("level2.png");
+        boss = new Texture("boss.png");
+        gameOver = new Texture("gameOver.png");
+        level = 1;
+
+        stage = new Stage(new ScreenViewport());
+        Gdx.input.setInputProcessor(stage);
+        Skin mySkin = new Skin(Gdx.files.internal("glassy/skin/glassy-ui.json"));
+
+        ImageButton repeatButton = new ImageButton(mySkin);
+        repeatButton.setSize(130, 135);
+        repeatButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(new Texture(Gdx.files.internal("repeat.png"))));
+        repeatButton.setPosition(Gdx.graphics.getWidth() - 140, 10);
+        repeatButton.addListener(new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+                gameState = 0;
+            }
+
+            @Override
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                return true;
+            }
+        });
+        stage.addActor(repeatButton);
+
         player = new Player();
         random = new Random();
+        font = new BitmapFont();
+        font.setColor(Color.WHITE);
+        font.getData().setScale(5);
     }
 
     @Override
@@ -41,19 +95,55 @@ public class Plane extends ApplicationAdapter {
         batch.begin();
         batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        if (gameState == 1) {
-            cloudsSpawn();
-            monstersSpawn();
-            player.fly(batch);
+        if (gameState == 1 && gameTime > 3000 && level == 1) {
+            level = 2;
+            monster.clear();
+        }
 
-        } else if (gameState == 0) {
+        if (gameState == 1 && gameTime > 6600 && level == 2) {
+            level = 3;
+            monster.clear();
+        }
+
+        if (gameState == 1) {
+            gameTime++;
+            cloudsSpawn();
+            if (gameTime > 100) {
+                monstersSpawn();
+            }
+            player.fly();
+            playerFire();
+
+
+        } else if (gameState == 0) { //START GAME
+
+            monster.clear();
+            player.setPlaneX(Gdx.graphics.getWidth() / 2 - player.getPlaneTexture(0).getWidth() / 2);
+            player.setPlaneY(Gdx.graphics.getHeight() / 2 - player.getPlaneTexture(0).getHeight() / 2);
+            score = 0;
+            level = 1;
+
+            batch.draw(logo, Gdx.graphics.getWidth() / 2 - logo.getWidth() / 2, Gdx.graphics.getHeight() - logo.getHeight() - 50);
             if (Gdx.input.justTouched()) {
                 gameState = 1;
             }
-        } else if (gameState == 2) {
-            if (Gdx.input.justTouched()) {
-                gameState = 1;
-            }
+        } else if (gameState == 4) {        //GAME OVER
+            player.death(batch);
+            gameTime = 0;
+            font.draw(batch, String.valueOf(score), 50, 100);
+            batch.draw(gameOver, Gdx.graphics.getWidth() / 2 - gameOver.getWidth() / 2, Gdx.graphics.getHeight() / 2 - gameOver.getHeight() / 2);
+            stage.act();
+            stage.draw();
+        }
+
+        font.draw(batch, String.valueOf(score), 50, 100);
+
+        if (gameTime < 300 && gameState == 1 && level == 1) {
+            batch.draw(level1, Gdx.graphics.getWidth() / 2 - level1.getWidth() / 2, Gdx.graphics.getHeight() - level1.getHeight() - 50);
+        } else if (gameTime < 3500 && gameState == 1 && level == 2) {
+            batch.draw(level2, Gdx.graphics.getWidth() / 2 - level2.getWidth() / 2, Gdx.graphics.getHeight() - level2.getHeight() - 50);
+        } else if (gameTime < 7100 && gameState == 1 && level == 3) {
+            batch.draw(boss, Gdx.graphics.getWidth() / 2 - boss.getWidth() / 2, Gdx.graphics.getHeight() - boss.getHeight() - 50);
         }
         batch.end();
     }
@@ -77,21 +167,84 @@ public class Plane extends ApplicationAdapter {
         if (monsterSpawn < MONSTERS_NUMBER) {
             monsterSpawn++;
         } else {
-            brownBird.add(new BrownBird(4, 3, Gdx.graphics.getWidth(), (int) (random.nextFloat() * Gdx.graphics.getHeight())));
-            redFly.add(new RedFly(3, 2, Gdx.graphics.getWidth(), (int) (random.nextFloat() * Gdx.graphics.getHeight())));
-            monsterSpawn = 0;
+
+            if ((gameTime > 2600 && gameTime < 3500) || (gameTime > 6100 && gameTime < 7000)) {
+                //Wait
+            } else {
+                int randMonster = random.nextInt(100) + (int) (gameTime / 1000);
+                Gdx.app.log("GPDEB", "Random: " + String.valueOf(randMonster) + " gametime: " + String.valueOf((int) gameTime / 100) + " level: " +level);
+
+                if (randMonster > 20) {
+                    if (level <= 2) {
+                        monster.add(new BrownBird(2, 5, 3, Gdx.graphics.getWidth(), (int) (random.nextFloat() * Gdx.graphics.getHeight())));
+                    }
+                    if (randMonster > 40 && gameTime > 1000) {
+                        if (level <= 2) {
+                            monster.add(new RedFly(1, 3, 2, Gdx.graphics.getWidth(), (int) (random.nextFloat() * Gdx.graphics.getHeight())));
+                        }
+                    }
+                    if (level == 2) {
+                        if(randMonster > 60) {
+                            monster.add(new BlueBird(3, 2, 8, Gdx.graphics.getWidth(), (int) (random.nextFloat() * Gdx.graphics.getHeight())));
+                        }
+                        if(randMonster > 80 && gameTime > 4000) {
+                            monster.add(new LandMonster(1, 2, 8, Gdx.graphics.getWidth(), 0));
+                        }
+                    }
+                }
+
+
+                monsterSpawn = 0;
+            }
+
         }
-        if (brownBird.size() > 0) {
-            for (int i = 0; i < brownBird.size(); i++) {
-                brownBird.get(i).fly();
-                brownBird.get(i).draw(batch);
+        if (monster.size() > 0) {
+            for (int i = 0; i < monster.size(); i++) {
+
+                if (!monster.get(i).isDead()) {
+                    monster.get(i).fly();
+                    if (monster.get(i) instanceof LandMonster) {
+                        ((LandMonster) monster.get(i)).jump();
+                    }
+
+                    monster.get(i).draw(batch);
+
+                    if (Intersector.overlaps(player.getPlaneRectangle(), monster.get(i).getRectangle())) {
+
+                        monster.remove(i);
+                        gameState = 4;
+                        break;
+
+                    }
+                } else {
+                    monster.get(i).draw(batch);
+                }
             }
         }
-        if (redFly.size() > 0) {
-            for (int i = 0; i < redFly.size(); i++) {
-                redFly.get(i).fly();
-                redFly.get(i).draw(batch);
+    }
+
+    private void playerFire() {
+        if ((Gdx.input.isTouched() || player.getShootDelay() > 0) && gameTime > 50) {
+            if (player.getShootDelay() == 0) {
+                player.setShootDelay(30);
+                player.shoot();
+
+                for (int i = 0; i < monster.size(); i++) {
+                    if (player.getPlaneY() > monster.get(i).getPositionY()) {
+                        if (player.getPlaneY() - monster.get(i).getPositionY() < 70 && !monster.get(i).isDead() && player.getPlaneX() < monster.get(i).getPositionX()) {
+                            score = score + monster.get(i).getHit();
+                        }
+                    } else if (monster.get(i).getPositionY() - player.getPlaneY() < 70 && !monster.get(i).isDead() && player.getPlaneX() < monster.get(i).getPositionX()) {
+                        score = score + monster.get(i).getHit();
+                    }
+                }
+            } else {
+                player.setShootDelay(player.getShootDelay() - 1);
             }
+            player.shootDraw(batch);
+
+        } else {
+            player.flyDraw(batch);
         }
     }
 

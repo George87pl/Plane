@@ -14,9 +14,9 @@ class BrownBird extends Monster {
                 new Texture("bird1_7.png"),
                 new Texture("bird1_8.png")};
 
-    static private Texture deathTexture = new Texture("bird1death.png");
+    static private Texture[] deathTexture = new Texture[]{ new Texture("bird1death.png")};
 
-    BrownBird(int speed, int animationSpeed, int positionX, int positionY) {
-        super(flyTexture, speed, animationSpeed, positionX, positionY);
+    BrownBird(int lives, int speed, int animationSpeed, int positionX, int positionY) {
+        super(flyTexture, deathTexture, lives, speed, animationSpeed, positionX, positionY);
     }
 }
