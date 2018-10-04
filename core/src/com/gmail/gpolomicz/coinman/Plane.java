@@ -2,6 +2,7 @@ package com.gmail.gpolomicz.coinman;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -45,10 +46,11 @@ public class Plane extends ApplicationAdapter {
     private int monsterSpawn;
     private int gameState;
     private int level;
-    private boolean level2IsOut = false;
-    private double gameTime;
+    private double gameTime = 0;   //6400
     private BitmapFont font;
     private int score;
+    private ImageButton repeatButton;
+    private Music bossFight;
 
 
     @Override
@@ -59,29 +61,16 @@ public class Plane extends ApplicationAdapter {
         level1 = new Texture("level1.png");
         level2 = new Texture("level2.png");
         boss = new Texture("boss.png");
-        gameOver = new Texture("gameOver.png");
+        gameOver = new Texture("game_over.png");
         level = 1;
 
         stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
         Skin mySkin = new Skin(Gdx.files.internal("glassy/skin/glassy-ui.json"));
+        repeatButton = new ImageButton(mySkin);
 
-        ImageButton repeatButton = new ImageButton(mySkin);
-        repeatButton.setSize(130, 135);
-        repeatButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(new Texture(Gdx.files.internal("repeat.png"))));
-        repeatButton.setPosition(Gdx.graphics.getWidth() - 140, 10);
-        repeatButton.addListener(new InputListener() {
-            @Override
-            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-                gameState = 0;
-            }
-
-            @Override
-            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-                return true;
-            }
-        });
-        stage.addActor(repeatButton);
+        bossFight = Gdx.audio.newMusic(Gdx.files.internal("bossFight.mp3"));
+        bossFight.setLooping(true);
 
         player = new Player();
         random = new Random();
@@ -100,9 +89,9 @@ public class Plane extends ApplicationAdapter {
             monster.clear();
         }
 
-        if (gameState == 1 && gameTime > 6600 && level == 2) {
+        if (gameState == 1 && gameTime > 6700 && level == 2) {
             level = 3;
-            monster.clear();
+            bossFight.play();
         }
 
         if (gameState == 1) {
@@ -116,7 +105,7 @@ public class Plane extends ApplicationAdapter {
 
 
         } else if (gameState == 0) { //START GAME
-
+            repeatButton.remove();
             monster.clear();
             player.setPlaneX(Gdx.graphics.getWidth() / 2 - player.getPlaneTexture(0).getWidth() / 2);
             player.setPlaneY(Gdx.graphics.getHeight() / 2 - player.getPlaneTexture(0).getHeight() / 2);
@@ -130,13 +119,35 @@ public class Plane extends ApplicationAdapter {
         } else if (gameState == 4) {        //GAME OVER
             player.death(batch);
             gameTime = 0;
+            player.setLive(3);
+            bossFight.stop();
             font.draw(batch, String.valueOf(score), 50, 100);
             batch.draw(gameOver, Gdx.graphics.getWidth() / 2 - gameOver.getWidth() / 2, Gdx.graphics.getHeight() / 2 - gameOver.getHeight() / 2);
+            batch.draw(player.getLives()[player.getLive()], 10, Gdx.graphics.getHeight() - 42);
+            batch.draw(logo, 100, 100);
+
+            repeatButton.setSize(130, 135);
+            repeatButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(new Texture(Gdx.files.internal("repeat.png"))));
+            repeatButton.setPosition(Gdx.graphics.getWidth() - 140, 10);
+            repeatButton.addListener(new InputListener() {
+                @Override
+                public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+                    gameState = 0;
+                }
+
+                @Override
+                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                    return true;
+                }
+            });
+            stage.addActor(repeatButton);
             stage.act();
             stage.draw();
         }
 
+
         font.draw(batch, String.valueOf(score), 50, 100);
+        batch.draw(player.getLives()[player.getLive()], 10, Gdx.graphics.getHeight() - 42);
 
         if (gameTime < 300 && gameState == 1 && level == 1) {
             batch.draw(level1, Gdx.graphics.getWidth() / 2 - level1.getWidth() / 2, Gdx.graphics.getHeight() - level1.getHeight() - 50);
@@ -145,6 +156,16 @@ public class Plane extends ApplicationAdapter {
         } else if (gameTime < 7100 && gameState == 1 && level == 3) {
             batch.draw(boss, Gdx.graphics.getWidth() / 2 - boss.getWidth() / 2, Gdx.graphics.getHeight() - boss.getHeight() - 50);
         }
+
+        if (gameState == 1 && gameTime > 6510) {
+            bossFight();
+        }
+
+        if (gameState == 1 && gameTime > 6800) {
+            batch.draw(monster.get(0).hpbar1, Gdx.graphics.getWidth() / 2 - 300, 50);
+            batch.draw(monster.get(0).hpbar2, Gdx.graphics.getWidth() / 2 - 300, 51, monster.get(0).getLives() * 6, 40);
+        }
+
         batch.end();
     }
 
@@ -172,7 +193,7 @@ public class Plane extends ApplicationAdapter {
                 //Wait
             } else {
                 int randMonster = random.nextInt(100) + (int) (gameTime / 1000);
-                Gdx.app.log("GPDEB", "Random: " + String.valueOf(randMonster) + " gametime: " + String.valueOf((int) gameTime / 100) + " level: " +level);
+//                Gdx.app.log("GPDEB", "Random: " + String.valueOf(randMonster) + " gametime: " + String.valueOf((int) gameTime / 100) + " level: " +level);
 
                 if (randMonster > 20) {
                     if (level <= 2) {
@@ -184,21 +205,26 @@ public class Plane extends ApplicationAdapter {
                         }
                     }
                     if (level == 2) {
-                        if(randMonster > 60) {
+                        if (randMonster > 60) {
                             monster.add(new BlueBird(3, 2, 8, Gdx.graphics.getWidth(), (int) (random.nextFloat() * Gdx.graphics.getHeight())));
                         }
-                        if(randMonster > 80 && gameTime > 4000) {
+                        if (randMonster > 80 && gameTime > 4000) {
                             monster.add(new LandMonster(1, 2, 8, Gdx.graphics.getWidth(), 0));
                         }
                     }
                 }
 
-
                 monsterSpawn = 0;
             }
-
         }
-        if (monster.size() > 0) {
+
+        if (gameTime == 6500) {
+            monster.clear();
+            Gdx.app.log("GPDEB", "BOSS SPAWNED");
+            monster.add(new Boss(100, 1, 8, Gdx.graphics.getWidth() + 250, 100));
+        }
+
+        if (monster.size() > 0 && gameState == 1) {
             for (int i = 0; i < monster.size(); i++) {
 
                 if (!monster.get(i).isDead()) {
@@ -211,11 +237,31 @@ public class Plane extends ApplicationAdapter {
 
                     if (Intersector.overlaps(player.getPlaneRectangle(), monster.get(i).getRectangle())) {
 
-                        monster.remove(i);
-                        gameState = 4;
-                        break;
-
+                        player.setLive(player.getLive() - 1);
+                        if (player.getLive() <= 0) {
+                            player.getKillSound().play();
+                            monster.remove(i);
+                            gameState = 4;
+                        } else {
+                            player.getHit();
+                        }
                     }
+
+                    if (level == 3 && gameState == 1) {
+                        if (monster.get(i).getAtackRectangle() != null) {
+                            if ((Intersector.overlaps(player.getPlaneRectangle(), monster.get(i).getAtackRectangle()))) {
+                                player.setLive(player.getLive() - 1);
+                                if (player.getLive() <= 0) {
+                                    player.getKillSound().play();
+                                    monster.remove(i);
+                                    gameState = 4;
+                                } else {
+                                    player.getHit();
+                                }
+                            }
+                        }
+                    }
+
                 } else {
                     monster.get(i).draw(batch);
                 }
@@ -230,14 +276,11 @@ public class Plane extends ApplicationAdapter {
                 player.shoot();
 
                 for (int i = 0; i < monster.size(); i++) {
-                    if (player.getPlaneY() > monster.get(i).getPositionY()) {
-                        if (player.getPlaneY() - monster.get(i).getPositionY() < 70 && !monster.get(i).isDead() && player.getPlaneX() < monster.get(i).getPositionX()) {
-                            score = score + monster.get(i).getHit();
-                        }
-                    } else if (monster.get(i).getPositionY() - player.getPlaneY() < 70 && !monster.get(i).isDead() && player.getPlaneX() < monster.get(i).getPositionX()) {
+                    if (Intersector.overlaps(player.getShootRectangle(), monster.get(i).getRectangle())) {
                         score = score + monster.get(i).getHit();
                     }
                 }
+
             } else {
                 player.setShootDelay(player.getShootDelay() - 1);
             }
@@ -246,6 +289,18 @@ public class Plane extends ApplicationAdapter {
         } else {
             player.flyDraw(batch);
         }
+    }
+
+    private void bossFight() {
+
+        if (gameTime < 6600) {
+            ((Boss) monster.get(0)).makeShadow(batch);
+        }
+
+        if (gameTime > 7000) {
+            ((Boss) monster.get(0)).attack1(batch);
+        }
+
     }
 
     @Override

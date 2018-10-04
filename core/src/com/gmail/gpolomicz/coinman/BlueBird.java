@@ -1,6 +1,7 @@
 package com.gmail.gpolomicz.coinman;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
@@ -33,6 +34,8 @@ class BlueBird extends Monster {
     BlueBird(int live, int speed, int animationSpeed, int positionX, int positionY) {
         super(flyTextures, deathTexture, live, speed, animationSpeed, positionX, positionY);
 
+        Sound killSound = Gdx.audio.newSound(Gdx.files.internal("bird3kill.mp3"));
+        super.setKillSound(killSound);
         this.positionX = positionX;
         this.positionY = positionY;
 

@@ -1,5 +1,7 @@
 package com.gmail.gpolomicz.coinman;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 
 class BrownBird extends Monster {
@@ -18,5 +20,8 @@ class BrownBird extends Monster {
 
     BrownBird(int lives, int speed, int animationSpeed, int positionX, int positionY) {
         super(flyTexture, deathTexture, lives, speed, animationSpeed, positionX, positionY);
+        Sound killSound = Gdx.audio.newSound(Gdx.files.internal("bird1kill.mp3"));
+        killSound.play();
+        super.setKillSound(killSound);
     }
 }

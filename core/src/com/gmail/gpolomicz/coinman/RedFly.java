@@ -1,6 +1,7 @@
 package com.gmail.gpolomicz.coinman;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 
 import java.util.Random;
@@ -25,6 +26,8 @@ class RedFly extends Monster {
 
     RedFly(int lives, int speed, int animationSpeed, int positionX, int positionY) {
         super(flyTextures, deathTexture, lives, speed, animationSpeed, positionX, positionY);
+        Sound killSound = Gdx.audio.newSound(Gdx.files.internal("bird2kill.mp3"));
+        super.setKillSound(killSound);
         flyY = positionY;
         flyX = positionX;
         this.speed = speed;

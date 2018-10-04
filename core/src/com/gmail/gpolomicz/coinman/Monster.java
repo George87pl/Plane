@@ -1,6 +1,7 @@
 package com.gmail.gpolomicz.coinman;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -11,6 +12,9 @@ class Monster {
     private int lives;
     private Texture[] flyTextures;
     private Texture[] deathTextures;
+    Texture hpbar1 = new Texture("bosshp1.png");
+    Texture hpbar2 = new Texture("bosshp2.png");;
+    private Sound killSound;
     private int speed;
     private int flyAnimationFrameCount;
     private int flyAnimationSpeed;
@@ -19,6 +23,7 @@ class Monster {
     private int positionX;
     private int positionY;
     private Rectangle rectangle;
+    private Rectangle atackRectangle;
     private boolean isDead = false;
     private int deathTime;
     private boolean isHit = false;
@@ -78,6 +83,7 @@ class Monster {
         lives--;
         if(lives == 0) {
             isDead = true;
+            killSound.play();
             deathTime = 100;
             return 1;
         } else {
@@ -101,12 +107,13 @@ class Monster {
                     hitTime--;
                 } else {
                     isHit = false;
+                    batch.draw(flyTextures[flyAnimationState], positionX, positionY);
                 }
 
             }else {
                 batch.draw(flyTextures[flyAnimationState], positionX, positionY);
             }
-            rectangle = new Rectangle(positionX, positionY, flyTextures[flyAnimationState].getWidth(), flyTextures[flyAnimationState].getWidth());
+            rectangle = new Rectangle(positionX, positionY, flyTextures[flyAnimationState].getWidth(), flyTextures[flyAnimationState].getHeight());
         } else {
             if(deathTime > 0 ) {
                 death();
@@ -178,5 +185,21 @@ class Monster {
 
     public int getDeathAnimationState() {
         return deathAnimationState;
+    }
+
+    public void setKillSound(Sound killSound) {
+        this.killSound = killSound;
+    }
+
+    public int getLives() {
+        return lives;
+    }
+
+    public void setAtackRectangle(Rectangle atackRectangle) {
+        this.atackRectangle = atackRectangle;
+    }
+
+    public Rectangle getAtackRectangle() {
+        return atackRectangle;
     }
 }

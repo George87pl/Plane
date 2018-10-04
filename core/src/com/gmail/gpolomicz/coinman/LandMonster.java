@@ -1,4 +1,6 @@
 package com.gmail.gpolomicz.coinman;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 
 import java.util.Random;
@@ -18,6 +20,8 @@ class LandMonster extends Monster {
 
     LandMonster(int live, int speed, int animationSpeed, int positionX, int positionY) {
         super(flyTextures, deathTexture, live, speed, animationSpeed, positionX, positionY);
+        Sound killSound = Gdx.audio.newSound(Gdx.files.internal("monsterkill.mp3"));
+        super.setKillSound(killSound);
         this.positionY = positionY;
         gravity = 1;
     }
