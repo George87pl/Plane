@@ -26,6 +26,7 @@ class Monster {
     private Rectangle atackRectangle;
     private boolean isDead = false;
     private int deathTime;
+    private int deathTimeSet = 100;
     private boolean isHit = false;
     private int hitTime;
 
@@ -81,10 +82,11 @@ class Monster {
 
     int getHit() {
         lives--;
+
         if(lives == 0) {
             isDead = true;
             killSound.play();
-            deathTime = 100;
+            deathTime = deathTimeSet;
             return 1;
         } else {
             isHit = true;
@@ -201,5 +203,9 @@ class Monster {
 
     public Rectangle getAtackRectangle() {
         return atackRectangle;
+    }
+
+    public void setDeathTimeSet(int deathTimeSet) {
+        this.deathTimeSet = deathTimeSet;
     }
 }

@@ -33,6 +33,7 @@ public class Plane extends ApplicationAdapter {
     private Texture level2;
     private Texture boss;
     private Texture gameOver;
+    private Texture win;
     private Stage stage;
 
 
@@ -51,7 +52,8 @@ public class Plane extends ApplicationAdapter {
     private int score;
     private ImageButton repeatButton;
     private Music bossFight;
-
+    private int enrage1;
+    private int enrage2;
 
     @Override
     public void create() {
@@ -62,6 +64,7 @@ public class Plane extends ApplicationAdapter {
         level2 = new Texture("level2.png");
         boss = new Texture("boss.png");
         gameOver = new Texture("game_over.png");
+        win = new Texture("win.png");
         level = 1;
 
         stage = new Stage(new ScreenViewport());
@@ -77,6 +80,9 @@ public class Plane extends ApplicationAdapter {
         font = new BitmapFont();
         font.setColor(Color.WHITE);
         font.getData().setScale(5);
+
+        enrage1 = random.nextInt(100) + 50;
+        enrage2 = random.nextInt(100) + 50;
     }
 
     @Override
@@ -161,6 +167,34 @@ public class Plane extends ApplicationAdapter {
             bossFight();
         }
 
+        if (gameState == 5) {        //GAME WIN
+            gameTime = 0;
+            player.setLive(3);
+            bossFight.stop();
+            font.draw(batch, String.valueOf(score), 50, 100);
+            batch.draw(win, Gdx.graphics.getWidth() / 2 - win.getWidth() / 2, Gdx.graphics.getHeight() / 2 - win.getHeight() / 2);
+            batch.draw(player.getLives()[player.getLive()], 10, Gdx.graphics.getHeight() - 42);
+            batch.draw(logo, 100, 100);
+
+            repeatButton.setSize(130, 135);
+            repeatButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(new Texture(Gdx.files.internal("repeat.png"))));
+            repeatButton.setPosition(Gdx.graphics.getWidth() - 140, 10);
+            repeatButton.addListener(new InputListener() {
+                @Override
+                public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+                    gameState = 0;
+                }
+
+                @Override
+                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                    return true;
+                }
+            });
+            stage.addActor(repeatButton);
+            stage.act();
+            stage.draw();
+        }
+
         if (gameState == 1 && gameTime > 6800) {
             batch.draw(monster.get(0).hpbar1, Gdx.graphics.getWidth() / 2 - 300, 50);
             batch.draw(monster.get(0).hpbar2, Gdx.graphics.getWidth() / 2 - 300, 51, monster.get(0).getLives() * 6, 40);
@@ -220,7 +254,6 @@ public class Plane extends ApplicationAdapter {
 
         if (gameTime == 6500) {
             monster.clear();
-            Gdx.app.log("GPDEB", "BOSS SPAWNED");
             monster.add(new Boss(100, 1, 8, Gdx.graphics.getWidth() + 250, 100));
         }
 
@@ -275,11 +308,18 @@ public class Plane extends ApplicationAdapter {
                 player.setShootDelay(30);
                 player.shoot();
 
-                for (int i = 0; i < monster.size(); i++) {
-                    if (Intersector.overlaps(player.getShootRectangle(), monster.get(i).getRectangle())) {
-                        score = score + monster.get(i).getHit();
+                if (level == 3) {
+                    if (Intersector.overlaps(player.getShootRectangle(), ((Boss) monster.get(0)).getEyeRectangle())) {
+                        score = score + monster.get(0).getHit();
+                    }
+                } else {
+                    for (int i = 0; i < monster.size(); i++) {
+                        if (Intersector.overlaps(player.getShootRectangle(), monster.get(i).getRectangle())) {
+                            score = score + monster.get(i).getHit();
+                        }
                     }
                 }
+
 
             } else {
                 player.setShootDelay(player.getShootDelay() - 1);
@@ -293,14 +333,61 @@ public class Plane extends ApplicationAdapter {
 
     private void bossFight() {
 
-        if (gameTime < 6600) {
-            ((Boss) monster.get(0)).makeShadow(batch);
-        }
+        if (((Boss) monster.get(0)).win) {
+            gameState = 5;
+        } else {
 
-        if (gameTime > 7000) {
-            ((Boss) monster.get(0)).attack1(batch);
-        }
 
+            if (gameTime < 6600) {
+                ((Boss) monster.get(0)).makeShadow(batch);
+            }
+
+            if (!((Boss) monster.get(0)).isEnrage()) {
+                if (gameTime > 7000) {
+                    if (!((Boss) monster.get(0)).isAttack1Ready() || !((Boss) monster.get(0)).isAttack2Ready()) {
+                        if (gameTime > 7000 && ((Boss) monster.get(0)).isAttack1Execute()) {
+                            ((Boss) monster.get(0)).attack1(batch);
+                        }
+
+                        if (gameTime > 7000 && ((Boss) monster.get(0)).isAttack2Execute()) {
+                            ((Boss) monster.get(0)).attack2(batch, player.getPlaneX());
+                        }
+                    } else {
+                        if (((Boss) monster.get(0)).getAttack1Break() == 0 && ((Boss) monster.get(0)).getAttack2Break() == 0) {
+                            int randomAttack = random.nextInt(100);
+                            if (randomAttack < 75) {
+                                ((Boss) monster.get(0)).setAttack1Execute(true);
+                                ((Boss) monster.get(0)).attack1(batch);
+                            } else {
+                                ((Boss) monster.get(0)).setAttack2Execute(true);
+                                ((Boss) monster.get(0)).attack2(batch, player.getPlaneX());
+                            }
+                        } else {
+                            if (((Boss) monster.get(0)).getAttack1Break() > 0) {
+                                ((Boss) monster.get(0)).setAttack1Break(((Boss) monster.get(0)).getAttack1Break() - 1);
+                            }
+
+                            if (((Boss) monster.get(0)).getAttack2Break() > 0) {
+                                ((Boss) monster.get(0)).setAttack2Break(((Boss) monster.get(0)).getAttack2Break() - 1);
+                            }
+                        }
+                    }
+                }
+            } else {
+                if (((Boss) monster.get(0)).getAttack1Break() == 0) {
+                    ((Boss) monster.get(0)).setAttack1Execute(true);
+                    ((Boss) monster.get(0)).attack1(batch);
+                } else {
+                    ((Boss) monster.get(0)).setAttack1Break(((Boss) monster.get(0)).getAttack1Break() - 1);
+                }
+                if (((Boss) monster.get(0)).getAttack2Break() == 0) {
+                    ((Boss) monster.get(0)).setAttack2Execute(true);
+                    ((Boss) monster.get(0)).attack2(batch, player.getPlaneX());
+                } else {
+                    ((Boss) monster.get(0)).setAttack2Break(((Boss) monster.get(0)).getAttack1Break() - 1);
+                }
+            }
+        }
     }
 
     @Override
